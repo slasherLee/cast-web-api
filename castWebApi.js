@@ -15,6 +15,10 @@ var discoveryTimeout = 4000;
 var appLoadTimeout = 6000;
 var thisVersion = '0.2.2';
 
+const TTS_TYPE_DEFAULT = 0;
+const TTS_TYPE_NAVER = 1;
+
+
 interpretArguments();
 createWebServer();
 
@@ -217,6 +221,27 @@ function createWebServer() {
 			}
 		}
 
+		else if (parsedUrl['pathname']=="/setMediaPlaybackNaver") {
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json; charset=utf-8');
+			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
+				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], parsedUrl['query']['mediaUrl'], parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl'], TTS_TYPE_NAVER, parsedUrl['query']['ttsText']).then(mediaStatus => {
+					if (mediaStatus) {
+						res.statusCode = 200;
+						res.setHeader('Content-Type', 'application/json; charset=utf-8');
+						res.end(mediaStatus);
+					} else {
+						res.statusCode = 500;
+						res.end();
+					}
+				});
+			} else {
+				res.statusCode = 400;
+				res.end('Parameter error');
+			}
+		}
+
+
 		else if (parsedUrl['pathname']=="/config") {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -266,7 +291,7 @@ function createWebServer() {
 		}
 	});
 
-	server.listen(port, hostname, () => {
+	server.listen(port, () => {
 	 	console.log(`Server running at http://${hostname}:${port}/`);
 	});
 
@@ -633,12 +658,34 @@ function setDevicePlaybackStop(address, sId) {
 	});
 }
 
-function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl) {
+function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl, ttsType = TTS_TYPE_DEFAULT, ttsText = "") {
 	return new Promise(resolve => {
 		var castv2Client = new Castv2Client();
 
-	  	castv2Client.connect(parseAddress(address), function() {
-			castv2Client.launch(DefaultMediaReceiver, function(err, player) {
+	  		castv2Client.connect(parseAddress(address), function() {
+				castv2Client.launch(DefaultMediaReceiver, function(err, player) {
+				if( ttsType == TTS_TYPE_NAVER )
+				{
+     				console.log("Naver");
+     				console.log(ttsText);
+					var fs = require('fs');
+					var client_id = 'YOUR_CLIENT_ID';
+					var client_secret = 'YOUR_CLIENT_SECRET';
+					var api_url = 'https://openapi.naver.com/v1/voice/tts.bin';
+					var request = require('request');
+					var options = {
+						url: api_url,
+						form: {'speaker':'mijin', 'speed':'0', 'text':ttsText},
+						headers: {'X-Naver-Client-Id':client_id, 'X-Naver-Client-Secret': client_secret}
+					};
+					var writeStream = fs.createWriteStream('./tts1.mp3');
+					var _req = request.post(options).on('response', function(response) {
+       					console.log(response.statusCode) // 200
+       					console.log(response.headers['content-type'])
+   					});
+  					_req.pipe(writeStream); // file로 출력
+  					mediaUrl = "./tts1.mp3";
+				}
 		 		var media = {
 					contentId: mediaUrl,
 			        contentType: mediaType,
