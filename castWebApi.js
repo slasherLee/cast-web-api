@@ -225,7 +225,9 @@ function createWebServer() {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
-				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], parsedUrl['query']['mediaUrl'], parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl'], TTS_TYPE_NAVER, parsedUrl['query']['ttsText']).then(mediaStatus => {
+				mediaUrl = parsedUrl['host'] + ':' + parsedUrl['port'] + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + parsedUrl['query']['ttsText']; 								
+				consoe.log("setMediaPlaybackNaver - mediaUrl : " + mediaUrl);
+				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl']).then(mediaStatus => {
 					if (mediaStatus) {
 						res.statusCode = 200;
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -238,6 +240,14 @@ function createWebServer() {
 			} else {
 				res.statusCode = 400;
 				res.end('Parameter error');
+			}
+		}
+
+		else if (parsedUrl['pathname']=="/getNaverTtsMp3") {
+			.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json; charset=utf-8');
+			if (parsedUrl['query']['speaker'] && parsedUrl['query']['speed'] && parsedUrl['query']['text']) {
+				getNaverTtsMp3(parsedUrl['query']['speaker'], parsedUrl['query']['speed'], parsedUrl['query']['text'])
 			}
 		}
 
@@ -658,34 +668,36 @@ function setDevicePlaybackStop(address, sId) {
 	});
 }
 
-function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl, ttsType = TTS_TYPE_DEFAULT, ttsText = "") {
+function getNaverTtsMp3(speaker, speed, text) {
+     	console.log("call getNaverTtsMp3");
+		console.log(text);
+		var fs = require('fs');
+		var client_id = 'YOUR_CLIENT_ID';
+		var client_secret = 'YOUR_CLIENT_SECRET';
+		var api_url = 'https://openapi.naver.com/v1/voice/tts.bin';
+		var request = require('request');
+		var options = {
+			url: api_url,
+			form: {'speaker':speaker, 'speed':speed, 'text':text},
+			headers: {'X-Naver-Client-Id':client_id, 'X-Naver-Client-Secret': client_secret}
+		};
+		var writeStream = fs.createWriteStream('./tts1.mp3');
+		var _req = request.post(options).on('response', function(response) {
+   			console.log(response.statusCode) // 200
+   			console.log(response.headers['content-type'])
+   		});
+  		_req.pipe(writeStream); // file로 출력
+		_req.pipe(res);
+}
+
+	
+
+function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl) {
 	return new Promise(resolve => {
 		var castv2Client = new Castv2Client();
 
 	  		castv2Client.connect(parseAddress(address), function() {
 				castv2Client.launch(DefaultMediaReceiver, function(err, player) {
-				if( ttsType == TTS_TYPE_NAVER )
-				{
-     				console.log("Naver");
-     				console.log(ttsText);
-					var fs = require('fs');
-					var client_id = 'YOUR_CLIENT_ID';
-					var client_secret = 'YOUR_CLIENT_SECRET';
-					var api_url = 'https://openapi.naver.com/v1/voice/tts.bin';
-					var request = require('request');
-					var options = {
-						url: api_url,
-						form: {'speaker':'mijin', 'speed':'0', 'text':ttsText},
-						headers: {'X-Naver-Client-Id':client_id, 'X-Naver-Client-Secret': client_secret}
-					};
-					var writeStream = fs.createWriteStream('./tts1.mp3');
-					var _req = request.post(options).on('response', function(response) {
-       					console.log(response.statusCode) // 200
-       					console.log(response.headers['content-type'])
-   					});
-  					_req.pipe(writeStream); // file로 출력
-  					mediaUrl = "./tts1.mp3";
-				}
 		 		var media = {
 					contentId: mediaUrl,
 			        contentType: mediaType,
