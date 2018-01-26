@@ -49,7 +49,6 @@ function interpretArguments() {
 function createWebServer() {
 	const server = http.createServer((req, res) => {
 		var parsedUrl = url.parse(req.url, true);
-
 		if (parsedUrl['pathname']=="/getDevices") {
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			getDevices().then(devices => {
@@ -225,8 +224,8 @@ function createWebServer() {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
-				mediaUrl = parsedUrl['host'] + ':' + parsedUrl['port'] + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + parsedUrl['query']['ttsText']; 								
-				consoe.log("setMediaPlaybackNaver - mediaUrl : " + mediaUrl);
+				mediaUrl = req.headers.host + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + parsedUrl['query']['ttsText']; 								
+				console.log("setMediaPlaybackNaver - mediaUrl : " + mediaUrl);
 				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl']).then(mediaStatus => {
 					if (mediaStatus) {
 						res.statusCode = 200;
@@ -244,7 +243,7 @@ function createWebServer() {
 		}
 
 		else if (parsedUrl['pathname']=="/getNaverTtsMp3") {
-			.statusCode = 200;
+			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['speaker'] && parsedUrl['query']['speed'] && parsedUrl['query']['text']) {
 				getNaverTtsMp3(parsedUrl['query']['speaker'], parsedUrl['query']['speed'], parsedUrl['query']['text'])
