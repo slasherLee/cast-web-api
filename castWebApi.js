@@ -224,8 +224,10 @@ function createWebServer() {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
-				mediaUrl = req.headers.host + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + parsedUrl['query']['ttsText']; 								
-				console.log("setMediaPlaybackNaver - mediaUrl : " + mediaUrl);
+				console.log("setMediaPlaybackNaver - parsed mediaUrl : " + parsedUrl['query']['ttsText']);
+				console.log(url.parse(req.url));	
+				mediaUrl = req.headers.host + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + encodeURIComponent(parsedUrl['query']['ttsText']);
+				console.log("setMediaPlaybackNaver - mediaUrl ori : " + mediaUrl);
 				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl']).then(mediaStatus => {
 					if (mediaStatus) {
 						res.statusCode = 200;
