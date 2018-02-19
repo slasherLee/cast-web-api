@@ -13,11 +13,7 @@ var currentRequestId = 1;
 var networkTimeout = 2000;
 var discoveryTimeout = 4000;
 var appLoadTimeout = 6000;
-var thisVersion = '0.2.2';
-
-const TTS_TYPE_DEFAULT = 0;
-const TTS_TYPE_NAVER = 1;
-
+var thisVersion = '0.2.3';
 
 interpretArguments();
 createWebServer();
@@ -49,6 +45,7 @@ function interpretArguments() {
 function createWebServer() {
 	const server = http.createServer((req, res) => {
 		var parsedUrl = url.parse(req.url, true);
+
 		if (parsedUrl['pathname']=="/getDevices") {
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			getDevices().then(devices => {
@@ -200,11 +197,13 @@ function createWebServer() {
 			}
 		}
 
-		else if (parsedUrl['pathname']=="/setMediaPlayback") {
+		else if (parsedUrl['pathname']=="/setMediaPlayback" || parsedUrl['pathname']=="/setMediaPlaybackShort") {
+			var short = false;
+			if (parsedUrl['pathname']=="/setMediaPlaybackShort") { short = true; }
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaUrl'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl']) {
-				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], parsedUrl['query']['mediaUrl'], parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl']).then(mediaStatus => {
+				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], parsedUrl['query']['mediaUrl'], parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl'], short).then(mediaStatus => {
 					if (mediaStatus) {
 						res.statusCode = 200;
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -224,11 +223,9 @@ function createWebServer() {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
-				console.log("setMediaPlaybackNaver - parsed mediaUrl : " + parsedUrl['query']['ttsText']);
-				console.log(url.parse(req.url));	
-				mediaUrl = req.headers.host + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + encodeURIComponent(parsedUrl['query']['ttsText']);
-				console.log("setMediaPlaybackNaver - mediaUrl ori : " + mediaUrl);
-				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl']).then(mediaStatus => {
+
+				mediaUrl = "http://" + req.headers.host + "/getNaverTtsMp3?speaker=mijin&speed=0&text=" + encodeURIComponent(parsedUrl['query']['ttsText']);
+				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl'], true).then(mediaStatus => {
 					if (mediaStatus) {
 						res.statusCode = 200;
 						res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -248,7 +245,7 @@ function createWebServer() {
 			res.statusCode = 200;
 			res.setHeader('Content-Type', 'application/json; charset=utf-8');
 			if (parsedUrl['query']['speaker'] && parsedUrl['query']['speed'] && parsedUrl['query']['text']) {
-				getNaverTtsMp3(parsedUrl['query']['speaker'], parsedUrl['query']['speed'], parsedUrl['query']['text'])
+				getNaverTtsMp3(parsedUrl['query']['speaker'], parsedUrl['query']['speed'], parsedUrl['query']['text'], res)
 			}
 		}
 
@@ -669,12 +666,12 @@ function setDevicePlaybackStop(address, sId) {
 	});
 }
 
-function getNaverTtsMp3(speaker, speed, text) {
+function getNaverTtsMp3(speaker, speed, text, res) {
      	console.log("call getNaverTtsMp3");
 		console.log(text);
 		var fs = require('fs');
 		var client_id = 'YOUR_CLIENT_ID';
-		var client_secret = 'YOUR_CLIENT_SECRET';
+        var client_secret = 'YOUR_CLIENT_SECRET';
 		var api_url = 'https://openapi.naver.com/v1/voice/tts.bin';
 		var request = require('request');
 		var options = {
@@ -687,18 +684,18 @@ function getNaverTtsMp3(speaker, speed, text) {
    			console.log(response.statusCode) // 200
    			console.log(response.headers['content-type'])
    		});
-  		_req.pipe(writeStream); // file로 출력
+  		_req.pipe(writeStream); // file�?출력
 		_req.pipe(res);
 }
 
 	
 
-function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl) {
+function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl, short) {
 	return new Promise(resolve => {
 		var castv2Client = new Castv2Client();
 
-	  		castv2Client.connect(parseAddress(address), function() {
-				castv2Client.launch(DefaultMediaReceiver, function(err, player) {
+	  	castv2Client.connect(parseAddress(address), function() {
+			castv2Client.launch(DefaultMediaReceiver, function(err, player) {
 		 		var media = {
 					contentId: mediaUrl,
 			        contentType: mediaType,
@@ -716,28 +713,38 @@ function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTi
 			   	};
 
 			  	player.load(media, { autoplay: true }, function(err, status) {
-			      	try{debug('Media loaded playerState: ', status.playerState);}
+			      	try{ 
+			      		debug('Media loaded playerState: ', status.playerState);
+			      		if (short==true) {
+			      			mediaStatus = JSON.stringify(status);
+			      			resolve(mediaStatus);
+			      		}
+			      	}
 			      	catch(e){
 			      		handleException(e);
 			      		try{player.close();}catch(e){handleException(e);}
 			      	}
 			    });
 
-			    player.on('status', function(status) {
-			        debug('status.playerState: ', status.playerState);
-			        if (status.playerState=='PLAYING') {
-			        	debug('status.playerState is PLAYING');
-			        	if (player.session.sessionId) {
-					  		console.log('Player has sessionId: ', player.session.sessionId);
-
-					  		getMediaStatus(address, player.session.sessionId).then(mediaStatus => {
-					    		debug('getMediaStatus return value: ', mediaStatus);
-					    		resolve(mediaStatus);
-							});
-					  	}
-			        }
+		  		player.on('status', function(status) {
+		  			if (status) {
+		  				debug('status.playerState: ', status.playerState);
+				        if (status.playerState=='PLAYING') {
+				        	debug('status.playerState is PLAYING');
+				        	if (player.session.sessionId) {
+						  		console.log('Player has sessionId: ', player.session.sessionId);
+						  		if (short==false) {
+					      			getMediaStatus(address, player.session.sessionId).then(mediaStatus => {
+							    		debug('getMediaStatus return value: ', mediaStatus);
+							    		resolve(mediaStatus);
+									});
+					      		}
+						  	}
+				        }
+		  			}
 			   	});
-			
+			  	
+
 			    setTimeout(() => {
 			    	closeClient(castv2Client);
 			    	resolve(null);
