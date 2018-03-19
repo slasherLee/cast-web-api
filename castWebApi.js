@@ -688,7 +688,32 @@ function getNaverTtsMp3(speaker, speed, text, res) {
 		_req.pipe(res);
 }
 
-	
+function getGoogleTtsMp3(speed, text, res) {
+     	console.log("call getGoogleTtsMp3");
+        console.log(text);
+        var googleTTS = require('google-tts-api');
+		var fs = require('fs');
+		googleTTS(text, 'ko-KR', speed).then(function(api_url) {
+			consloe.log(api_url);
+
+			var request = require('request');
+			var options = {
+				url: api_url,
+				headers: { 'user-agent': 'WHAT_EVER' }
+			};
+			var writeStream = fs.createWriteStream('./tts1.mp3');
+			var _req = request.post(options).on('response', function(response) {
+   				console.log(response.statusCode) // 200
+   				console.log(response.headers['content-type'])
+   			});
+  			_req.pipe(writeStream); // file�?출력
+			_req.pipe(res);
+		})
+		.catch(function (err) {
+  			console.error(err.stack);
+		});
+}
+
 
 function setMediaPlayback(address, mediaType, mediaUrl, mediaStreamType, mediaTitle, mediaSubtitle, mediaImageUrl, short) {
 	return new Promise(resolve => {

@@ -17,7 +17,9 @@
     	"mdns-js": "*",
     	"url": "*",
     	"minimist": "*",
-    	"node-fetch": "*"
+    	"node-fetch": "*",
+        "request": "*",
+        "google-tts-api": "*"
   	},
 	"repository": {
 		"type": "git",
