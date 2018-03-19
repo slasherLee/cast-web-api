@@ -248,6 +248,35 @@ function createWebServer() {
 				getNaverTtsMp3(parsedUrl['query']['speaker'], parsedUrl['query']['speed'], parsedUrl['query']['text'], res)
 			}
 		}
+		else if (parsedUrl['pathname']=="/setMediaPlaybackGoogle") {
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json; charset=utf-8');
+			if (parsedUrl['query']['address'] && parsedUrl['query']['mediaType'] && parsedUrl['query']['mediaStreamType'] && parsedUrl['query']['mediaTitle'] && parsedUrl['query']['mediaSubtitle'] && parsedUrl['query']['mediaImageUrl'] && parsedUrl['query']['ttsText']) {
+
+				mediaUrl = "http://" + req.headers.host + "/getGoogleTtsMp3?speed=1&text=" + encodeURIComponent(parsedUrl['query']['ttsText']);
+				setMediaPlayback(parsedUrl['query']['address'], parsedUrl['query']['mediaType'], mediaUrl, parsedUrl['query']['mediaStreamType'], parsedUrl['query']['mediaTitle'], parsedUrl['query']['mediaSubtitle'], parsedUrl['query']['mediaImageUrl'], true).then(mediaStatus => {
+					if (mediaStatus) {
+						res.statusCode = 200;
+						res.setHeader('Content-Type', 'application/json; charset=utf-8');
+						res.end(mediaStatus);
+					} else {
+						res.statusCode = 500;
+						res.end();
+					}
+				});
+			} else {
+				res.statusCode = 400;
+				res.end('Parameter error');
+			}
+		}
+
+		else if (parsedUrl['pathname']=="/getGoogleTtsMp3") {
+			res.statusCode = 200;
+			res.setHeader('Content-Type', 'application/json; charset=utf-8');
+			if (parsedUrl['query']['speed'] && parsedUrl['query']['text']) {
+				getGoogleTtsMp3(parsedUrl['query']['speed'], parsedUrl['query']['text'], res)
+			}
+		}
 
 
 		else if (parsedUrl['pathname']=="/config") {
